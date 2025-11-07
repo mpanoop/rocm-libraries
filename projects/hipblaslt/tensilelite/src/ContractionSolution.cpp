@@ -55,7 +55,8 @@ namespace TensileLite
     {
         NORMAL   = 0,
         HBM      = 1,
-        USERARGS = 2
+        USERARGS = 2,
+        DEVICEPOINTERARRAY = 3
     };
 
     void setVariantToBuffer(ConstantVariant const& value,

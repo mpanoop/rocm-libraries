@@ -691,6 +691,15 @@ rocblaslt_status rocblaslt_matrix_layout_set_attribute(rocblaslt_matrix_layout  
                     return rocblaslt_status_invalid_value;
                 }
                 break;
+            case ROCBLASLT_MATRIX_LAYOUT_BATCH_MODE:
+                if(sizeof(int32_t) <= sizeInBytes)
+                    memcpy(&matLayout->batch_mode, buf, sizeof(int32_t));
+                else
+                {
+                    log_error(__func__, "invalid buf size", sizeInBytes);
+                    return rocblaslt_status_invalid_value;
+                }                 
+                break;
             default:
                 log_error(__func__, "invalid attribute", attr);
                 return rocblaslt_status_invalid_value;
@@ -766,6 +775,16 @@ rocblaslt_status rocblaslt_matrix_layout_get_attribute(rocblaslt_matrix_layout  
                     return rocblaslt_status_invalid_value;
                 }
                 memcpy(buf, &matLayout->batch_stride, sizeof(int64_t));
+                break;
+            case ROCBLASLT_MATRIX_LAYOUT_BATCH_MODE:
+                if(sizeWritten)
+                    *sizeWritten = sizeof(int32_t);       
+                if(sizeInBytes != sizeof(int32_t))
+                {
+                    log_error(__func__, "invalid buf size", sizeInBytes);
+                    return rocblaslt_status_invalid_value;
+                }
+                memcpy(buf, &matLayout->batch_mode, sizeof(int32_t));                         
                 break;
             default:
                 log_error(__func__, "invalid attribute", attr);

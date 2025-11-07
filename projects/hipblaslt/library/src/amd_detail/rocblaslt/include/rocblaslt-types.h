@@ -323,7 +323,8 @@ typedef enum rocblaslt_matrix_layout_attribute_
     ROCBLASLT_MATRIX_LAYOUT_ROWS  = 4,
     ROCBLASLT_MATRIX_LAYOUT_COLS  = 5,
     ROCBLASLT_MATRIX_LAYOUT_LD    = 6,
-    ROCBLASLT_MATRIX_LAYOUT_MAX   = 7
+    ROCBLASLT_MATRIX_LAYOUT_BATCH_MODE = 7,
+    ROCBLASLT_MATRIX_LAYOUT_MAX   = 8
 } rocblaslt_matrix_layout_attribute;
 
 typedef enum
