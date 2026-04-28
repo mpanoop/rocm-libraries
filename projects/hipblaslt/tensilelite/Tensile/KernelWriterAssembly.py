@@ -4101,6 +4101,8 @@ class KernelWriterAssembly(KernelWriter):
     module = Module("computeLoadSrd")
     moduleLoadGeneralBatch = Module("computeLoadSrd-GeneralBatch")
     moduleLoadStridedBatch = Module("computeLoadSrd-StridedBatch")      
+    stridedBatchedGemmLoad = Label(label="StridedBatchedGemmLoad"+tc, comment="Computing the Batch Matrix's base address for Strided Batched GEMM")
+    stridedBatchedGemmLoad_End = Label(label="StridedBatchedGemmLoad"+tc+"_End", comment="End Computing the Batch Matrix's base address for Strided Batched")
     with self.allocTmpSgpr(2 + 2 + (0 if self.states.use64bShadowLimit else 2)) as tmpSgprInfo:
       stmp = tmpSgprInfo.idx
       tileStart = stmp+2
@@ -4291,8 +4293,6 @@ class KernelWriterAssembly(KernelWriter):
         else:
           assert(wg==2) # can only have one wg2 with a batch. Other dimensions should be packed into wg0/wg1
           stride = "Stride%s%s"%(tc,self.states.indexChars[tP['ia'][i]])
-          stridedBatchedGemmLoad = Label(label="StridedBatchedGemmLoad"+tc, comment="Computing the Batch Matrix's base address for Strided Batched GEMM")
-          stridedBatchedGemmLoad_End = Label(label="StridedBatchedGemmLoad"+tc+"_End", comment="End Computing the Batch Matrix's base address for Strided Batched")
           if kernel["ProblemType"]["SupportUserArgs"]:
             module.add(SCmpEQU32(src0=sgpr("ArgType"), src1=3, comment="ArgType == 3 for General Batched GEMM"))
             module.add(SCBranchSCC0(labelName=stridedBatchedGemmLoad.getLabelName()))
