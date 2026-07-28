@@ -1,0 +1,284 @@
+# Copyright Advanced Micro Devices, Inc., or its affiliates.
+# SPDX-License-Identifier: MIT
+
+#
+# Mixed Precision F32→F16→F32 GEMM Test Configuration
+#
+# This configuration tests the following scenario:
+# - Load F32 data from global memory (matrices A and B)
+# - Convert to packed F16 in VGPRs using v_cvt_pkrtz_f16_f32
+# - Compute GEMM in F16 using MFMA instructions
+# - Accumulate in F32 (native MFMA behavior)
+# - Write F32 results to matrices C and D
+#
+# This provides the performance benefits of F16 compute with F32 accuracy
+# for input/output data.
+#
+
+TestParameters:
+  marks: [skip-gfx900, skip-gfx906, skip-gfx908, skip-gfx1010, skip-gfx1011, skip-gfx1012, skip-gfx1030, skip-gfx1100, skip-gfx1101, skip-gfx1102] # Only supported on gfx90a, gfx940+, gfx94x, gfx12xx
+
+GlobalParameters:
+  CMakeBuildType: Release
+  PrintLevel: 1
+  ForceRedoBenchmarkProblems: True
+  ForceRedoLibraryLogic: True
+  ForceRedoLibraryClient: True
+  EnqueuesPerSync: 1
+  SyncsPerBenchmark: 1
+  NumElementsToValidate: -1  # Validate all elements
+  ValidationMaxToPrint: 16
+  ValidationPrintValids: True
+  DataInitTypeA: 3   # Random
+  DataInitTypeB: 3   # Random
+  DataInitTypeC: 3   # Random
+  DataInitTypeAlpha: 1
+  DataInitTypeBeta: 1
+  KernelTime: True
+  BoundsCheck: 4
+  MaxWorkspaceSize: 134217728
+  NumWarmups: 1
+  NumBenchmarks: 5
+  # PrintSolutionRejectionReason: True
+
+BenchmarkProblems:
+
+  ########################################
+  # Mixed F32→F16→F32 GEMM NN
+  ########################################
+  - # ProblemType
+    - OperationType: GEMM
+      # Input data types: F32 in global memory
+      DataType: s           # F32 for A
+      DataTypeA: s          # F32 explicit
+      DataTypeB: s          # F32 explicit
+      # Mac/Compute data types: F16 for computation
+      MacDataTypeA: h       # Convert to F16 for MFMA
+      MacDataTypeB: h       # Convert to F16 for MFMA
+      # Output data types: F32
+      DestDataType: s       # F32 for C/D
+      ComputeDataType: s    # F32 accumulation (c_f32_fast_f16_r)
+      HighPrecisionAccumulate: True
+      TransposeA: False
+      TransposeB: False
+      UseBeta: True
+      Batched: True
+
+    - # BenchmarkProblemSizeGroup
+      InitialSolutionParameters:
+      BenchmarkCommonParameters:
+        - KernelLanguage: ["Assembly"]
+        - EdgeType: ["ShiftPtr"]
+      ForkParameters:
+        # Enable F32→F16 conversion for both A and B
+        - ConvertF32toF16A: [True]
+        - ConvertF32toF16B: [True]
+
+        # Matrix instruction configurations for F16 compute
+        - MatrixInstruction:
+          # MI formats: [M, N, K, LoopIters, LoopItersB, Waves, InnerUnroll, TT0, TT1]
+          - [32, 32, 8, 1, 1, 2, 2, 2, 2]   # 64x64 tile
+          - [32, 32, 8, 1, 1, 4, 4, 2, 2]   # 128x128 tile
+          - [16, 16, 16, 1, 1, 2, 2, 2, 2]  # 64x64 tile
+          - [16, 16, 16, 1, 1, 4, 4, 2, 2]  # 128x128 tile
+
+        # Global read vector widths (loading F32 data)
+        - GlobalReadVectorWidthA: [2, 4]  # F32 loads
+        - GlobalReadVectorWidthB: [2, 4]  # F32 loads
+
+        # Prefetch and scheduling
+        - PrefetchGlobalRead: [1, 2]
+        - PrefetchLocalRead: [1]
+        - ScheduleIterAlg: [1, 3]
+
+        # LDS configuration
+        - 1LDSBuffer: [0, 1]
+        - DepthU: [16, 32, 64]
+
+        # Work group configurations
+        - WorkGroup:
+          - [16, 16, 1]
+          - [32, 8, 1]
+          - [64, 4, 1]
+
+        # Memory optimizations
+        - BufferLoad: [True]
+        - BufferStore: [True]
+        - DirectToLdsA: [False, True]   # Test both paths
+        - DirectToLdsB: [False, True]
+        - LdsPadA: [0, 4]
+        - LdsPadB: [0, 4]
+
+      BenchmarkForkParameters:
+      JoinParameters:
+      BenchmarkJoinParameters:
+      BenchmarkFinalParameters:
+        - ProblemSizes:
+          # Small sizes for validation
+          - Exact: [128, 128, 1, 128]
+          - Exact: [256, 256, 1, 256]
+          - Exact: [512, 512, 1, 512]
+
+          # Medium sizes
+          - Exact: [1024, 1024, 1, 1024]
+          - Exact: [2048, 2048, 1, 2048]
+
+          # Non-power-of-2 sizes
+          - Exact: [127, 127, 1, 127]
+          - Exact: [333, 333, 1, 333]
+          - Exact: [1023, 1023, 1, 1023]
+
+          # Rectangular sizes
+          - Exact: [512, 1024, 1, 256]
+          - Exact: [1024, 512, 1, 256]
+
+          # Batched sizes
+          - Exact: [256, 256, 8, 256]
+          - Exact: [512, 512, 4, 512]
+
+  ########################################
+  # Mixed F32→F16→F32 GEMM NT
+  ########################################
+  - # ProblemType
+    - OperationType: GEMM
+      DataType: s
+      DataTypeA: s
+      DataTypeB: s
+      MacDataTypeA: h
+      MacDataTypeB: h
+      DestDataType: s
+      ComputeDataType: s
+      HighPrecisionAccumulate: True
+      TransposeA: False
+      TransposeB: True
+      UseBeta: True
+      Batched: True
+
+    - # BenchmarkProblemSizeGroup
+      InitialSolutionParameters:
+      BenchmarkCommonParameters:
+        - KernelLanguage: ["Assembly"]
+        - EdgeType: ["ShiftPtr"]
+      ForkParameters:
+        - ConvertF32toF16A: [True]
+        - ConvertF32toF16B: [True]
+        - MatrixInstruction:
+          - [32, 32, 8, 1, 1, 2, 2, 2, 2]
+          - [16, 16, 16, 1, 1, 4, 4, 2, 2]
+        - GlobalReadVectorWidthA: [2, 4]
+        - GlobalReadVectorWidthB: [2, 4]
+        - PrefetchGlobalRead: [1, 2]
+        - PrefetchLocalRead: [1]
+        - ScheduleIterAlg: [3]
+        - 1LDSBuffer: [0, 1]
+        - DepthU: [32, 64]
+        - WorkGroup:
+          - [32, 8, 1]
+          - [64, 4, 1]
+        - BufferLoad: [True]
+        - BufferStore: [True]
+        - DirectToLdsA: [False, True]
+        - DirectToLdsB: [False, True]
+
+      BenchmarkForkParameters:
+      JoinParameters:
+      BenchmarkJoinParameters:
+      BenchmarkFinalParameters:
+        - ProblemSizes:
+          - Exact: [256, 256, 1, 256]
+          - Exact: [512, 512, 1, 512]
+          - Exact: [1024, 1024, 1, 1024]
+          - Exact: [2048, 2048, 1, 2048]
+
+  ########################################
+  # Mixed F32→F16→F32 GEMM TN
+  ########################################
+  - # ProblemType
+    - OperationType: GEMM
+      DataType: s
+      DataTypeA: s
+      DataTypeB: s
+      MacDataTypeA: h
+      MacDataTypeB: h
+      DestDataType: s
+      ComputeDataType: s
+      HighPrecisionAccumulate: True
+      TransposeA: True
+      TransposeB: False
+      UseBeta: True
+      Batched: True
+
+    - # BenchmarkProblemSizeGroup
+      InitialSolutionParameters:
+      BenchmarkCommonParameters:
+        - KernelLanguage: ["Assembly"]
+      ForkParameters:
+        - ConvertF32toF16A: [True]
+        - ConvertF32toF16B: [True]
+        - MatrixInstruction:
+          - [32, 32, 8, 1, 1, 2, 2, 2, 2]
+          - [16, 16, 16, 1, 1, 2, 2, 2, 2]
+        - GlobalReadVectorWidthA: [2, 4]
+        - GlobalReadVectorWidthB: [2, 4]
+        - PrefetchGlobalRead: [2]
+        - DepthU: [32, 64]
+        - BufferLoad: [True]
+
+      BenchmarkForkParameters:
+      JoinParameters:
+      BenchmarkJoinParameters:
+      BenchmarkFinalParameters:
+        - ProblemSizes:
+          - Exact: [512, 512, 1, 512]
+          - Exact: [1024, 1024, 1, 1024]
+
+  ########################################
+  # Mixed F32→F16→F32 GEMM TT
+  ########################################
+  - # ProblemType
+    - OperationType: GEMM
+      DataType: s
+      DataTypeA: s
+      DataTypeB: s
+      MacDataTypeA: h
+      MacDataTypeB: h
+      DestDataType: s
+      ComputeDataType: s
+      HighPrecisionAccumulate: True
+      TransposeA: True
+      TransposeB: True
+      UseBeta: True
+      Batched: True
+
+    - # BenchmarkProblemSizeGroup
+      InitialSolutionParameters:
+      BenchmarkCommonParameters:
+        - KernelLanguage: ["Assembly"]
+      ForkParameters:
+        - ConvertF32toF16A: [True]
+        - ConvertF32toF16B: [True]
+        - MatrixInstruction:
+          - [32, 32, 8, 1, 1, 2, 2, 2, 2]
+        - GlobalReadVectorWidthA: [2, 4]
+        - GlobalReadVectorWidthB: [2, 4]
+        - PrefetchGlobalRead: [2]
+        - DepthU: [32]
+        - BufferLoad: [True]
+
+      BenchmarkForkParameters:
+      JoinParameters:
+      BenchmarkJoinParameters:
+      BenchmarkFinalParameters:
+        - ProblemSizes:
+          - Exact: [512, 512, 1, 512]
+          - Exact: [1024, 1024, 1, 1024]
+
+LibraryLogic:
+  ScheduleName: "vega20"
+  DeviceNames: ["Device 7312", "Device 740c", "Device 7408", "Device 7400", "Device 1200"]
+  ArchitectureName: "gfx90a"
+
+  ########################################
+  # YAML file descriptor
+  ########################################
+  - {AssignedProblemIndices: [[0]], Function: "*", IndicesSummation: [3], IndicesC: [[0,1]], IndicesBatch: [[2]], MagicDivAlg: 1}

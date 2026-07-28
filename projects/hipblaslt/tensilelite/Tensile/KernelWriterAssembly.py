@@ -11412,8 +11412,16 @@ class KernelWriterAssembly(KernelWriter):
       graIdx = 0
       g2lIdx = 0
       loadWidth = tP["globalReadInstruction"].totalWidth # load width in elements?
-      bpe = tP["bpeGR"] if isAB else tP["bpe"]
-      bpl = bpe * tP["glvw"]  # bytes per load
+
+      # For F32→F16 conversion, load as F32 (4 bytes per element)
+      convertF32toF16 = kernel.get("ConvertF32toF16%s" % tc, False)
+      if convertF32toF16:
+        bpe = 4  # Load F32 data
+        bpl = bpe * tP["glvw"]  # bytes per load for F32
+      else:
+        bpe = tP["bpeGR"] if isAB else tP["bpe"]
+        bpl = bpe * tP["glvw"]  # bytes per load
+
       isGlc, isSlc, isNT, scope, th, nv = decodeNonTemporal(
           self.states.asmCaps, tP["NonTemporal"], TemporalHint(tP["TemporalHint"]), _nonVolatile(kernel, tc))
       isLds = True if kernel["DirectToLds%s"%tc] else False
@@ -11425,9 +11433,15 @@ class KernelWriterAssembly(KernelWriter):
 
       if g2lBufIdx >= 1:
         # G2L vgpr base string. DirectToVgpr or swapAB case. Need to toggle destination vreg set
-        destVgprPrefix = "G2L%s%u"%(tc, g2lBufIdx + 1)
+        destVgprPrefixBase = "G2L%s%u"%(tc, g2lBufIdx + 1)
       else:
-        destVgprPrefix = "G2L%s"%(tc)
+        destVgprPrefixBase = "G2L%s"%(tc)
+
+      # Use separate VGPR space for F32 loads before conversion
+      if convertF32toF16:
+        destVgprPrefix = destVgprPrefixBase + "F32"
+      else:
+        destVgprPrefix = destVgprPrefixBase
 
       loopCnt = -1
       for perp in range(0, tP["nrp"]):
@@ -11606,6 +11620,24 @@ class KernelWriterAssembly(KernelWriter):
       self.globalread_gpr_record.b.offset = []
 
     globalReadBody(tP)
+
+    # F32 to F16 conversion for mixed precision
+    if kernel.get("ConvertF32toF16%s" % tc, False):
+      from ..Components.ConversionF32toF16 import ConvertF32toPackedF16
+
+      # Calculate number of F32 values loaded
+      loadWidth = tP["globalReadInstruction"].totalWidth
+      numF32Values = tP["nrp"] * tP["nrc"] * (tP["nrcv"]//tP["nrcvpi"]) * tP["nrpv"] * loadWidth * tP["bpeRatio"]
+
+      # Create converter
+      f32VgprBase = "G2L%sF32" % tc if g2lBufIdx == 0 else "G2L%s%uF32" % (tc, g2lBufIdx + 1)
+      f16VgprBase = "G2L%s" % tc if g2lBufIdx == 0 else "G2L%s%u" % (tc, g2lBufIdx + 1)
+
+      converter = ConvertF32toPackedF16(self, tc, int(numF32Values), f32VgprBase, f16VgprBase)
+      imod.middle.add(converter())
+
+      # Update VGPR count for packed F16
+      # After conversion, we need half the VGPRs (rounded up)
 
     if kernel["ProblemType"]["Sparse"] and not kernel["DirectToVgprSparseMetadata"]:
       # Workaround, two cases to put metadata GR to non-sparse side

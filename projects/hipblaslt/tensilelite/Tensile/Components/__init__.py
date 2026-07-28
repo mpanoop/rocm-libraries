@@ -52,4 +52,5 @@ __all__ = [
     "LSU",
     "TensorDataMover",
     "GL2Prefetch",
+    "ConversionF32toF16",
     ]

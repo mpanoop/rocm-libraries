@@ -677,6 +677,8 @@ class SizeMapping:
                  'LocalSplitU',
                  'DirectToLdsA',
                  'DirectToLdsB',
+                 'ConvertF32toF16A',
+                 'ConvertF32toF16B',
                  'ExpertSchedulingMode',
                  'clusterDim'
                  ]
@@ -715,6 +717,8 @@ class SizeMapping:
         dtvb = bool(d['DirectToVgprB'])
         dtlA = bool(d['DirectToLdsA'])
         dtlB = bool(d['DirectToLdsB'])
+        cvtF32toF16A = bool(d.get('ConvertF32toF16A', False))
+        cvtF32toF16B = bool(d.get('ConvertF32toF16B', False))
 
         return cls(waveNum                  = d['NumThreads'] // d['WavefrontSize'],
                    workGroup                = d['WorkGroup'],
@@ -772,6 +776,8 @@ class SizeMapping:
                    LocalSplitU              = d["LocalSplitU"],
                    DirectToLdsA             = dtlA,
                    DirectToLdsB             = dtlB,
+                   ConvertF32toF16A         = cvtF32toF16A,
+                   ConvertF32toF16B         = cvtF32toF16B,
                    ExpertSchedulingMode     = d['ExpertSchedulingMode'],
                    clusterDim               = d['ClusterDim']
                    )
