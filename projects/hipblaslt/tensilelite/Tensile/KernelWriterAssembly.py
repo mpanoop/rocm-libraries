@@ -1446,15 +1446,25 @@ class KernelWriterAssembly(KernelWriter):
 
       if not kernel["DirectToLdsA"] or self.do["KeepDirectToLdsAlloc"]:
         moduleVgprMacroG2LA.add(RegSet("v", "vgprG2LA", "vgprG2LA_BASE", 0))
+        if kernel.get("ConvertF32toF16A", False):
+          # F32 staging area for F32→F16 conversion
+          moduleVgprMacroG2LA.add(RegSet("v", "vgprG2LAF32", "vgprG2LA_BASE", 0))
         if kernel["DirectToVgprA"]:
           # additional definition G2LA2 for swapping register sets
           moduleVgprMacroG2LA.add(RegSet("v", "vgprG2LA2", "vgprG2LA_BASE", self.states.a.numVgprG2LAllocated//2))
+          if kernel.get("ConvertF32toF16A", False):
+            moduleVgprMacroG2LA.add(RegSet("v", "vgprG2LA2F32", "vgprG2LA_BASE", self.states.a.numVgprG2LAllocated//2))
 
       if not kernel["DirectToLdsB"] or self.do["KeepDirectToLdsAlloc"]:
         moduleVgprMacroG2LB.add(RegSet("v", "vgprG2LB", "vgprG2LB_BASE", 0))
+        if kernel.get("ConvertF32toF16B", False):
+          # F32 staging area for F32→F16 conversion
+          moduleVgprMacroG2LB.add(RegSet("v", "vgprG2LBF32", "vgprG2LB_BASE", 0))
         if kernel["DirectToVgprB"]:
           # additional definition G2LB2 for swapping register sets
           moduleVgprMacroG2LB.add(RegSet("v", "vgprG2LB2", "vgprG2LB_BASE", self.states.b.numVgprG2LAllocated//2))
+          if kernel.get("ConvertF32toF16B", False):
+            moduleVgprMacroG2LB.add(RegSet("v", "vgprG2LB2F32", "vgprG2LB_BASE", self.states.b.numVgprG2LAllocated//2))
 
       if kernel["UnrollLoopSwapGlobalReadOrder"] and not kernel["DirectToLdsA"] and not kernel["DirectToLdsB"]:
         if kernel["ULSGRODoubleG2L"] == 0:
