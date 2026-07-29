@@ -11623,7 +11623,7 @@ class KernelWriterAssembly(KernelWriter):
 
     # F32 to F16 conversion for mixed precision
     if kernel.get("ConvertF32toF16%s" % tc, False):
-      from ..Components.ConversionF32toF16 import ConvertF32toPackedF16
+      from .Components.ConversionF32toF16 import ConvertF32toPackedF16
 
       # Calculate number of F32 values loaded
       loadWidth = tP["globalReadInstruction"].totalWidth

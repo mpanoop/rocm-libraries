@@ -180,6 +180,28 @@ namespace rocisa
         }
     };
 
+    struct VCvtPkrtzF16F32 : public VCvtInstruction
+    {
+        VCvtPkrtzF16F32(const std::shared_ptr<RegisterContainer>& dst,
+                        const InstructionInput&                   src0,
+                        const InstructionInput&                   src1,
+                        const std::string&                        comment = "")
+            : VCvtInstruction(CvtType::CVT_PKRTZ_F16_F32, dst, {src0, src1}, std::nullopt, std::nullopt, std::vector<int>({}), comment)
+        {
+            setInst("v_cvt_pkrtz_f16_f32");
+        }
+
+        VCvtPkrtzF16F32(const VCvtPkrtzF16F32& other)
+            : VCvtInstruction(other)
+        {
+        }
+
+        std::shared_ptr<Item> clone() const override
+        {
+            return std::make_shared<VCvtPkrtzF16F32>(*this);
+        }
+    };
+
     struct VCvtF32toU32 : public VCvtInstruction
     {
         VCvtF32toU32(const std::shared_ptr<RegisterContainer>& dst,

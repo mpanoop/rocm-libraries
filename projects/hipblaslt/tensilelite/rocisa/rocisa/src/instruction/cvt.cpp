@@ -494,6 +494,19 @@ void cvt_inst(nb::module_ m_inst)
             return new rocisa::VCvtPkF32toFP16(self);
         });
 
+    nb::class_<rocisa::VCvtPkrtzF16F32, rocisa::VCvtInstruction>(m_inst, "VCvtPkrtzF16F32")
+        .def(nb::init<const std::shared_ptr<rocisa::RegisterContainer>&,
+                      const InstructionInput&,
+                      const InstructionInput&,
+                      const std::string&>(),
+             nb::arg("dst"),
+             nb::arg("src0"),
+             nb::arg("src1"),
+             nb::arg("comment") = "")
+        .def("__deepcopy__", [](const rocisa::VCvtPkrtzF16F32& self, const nb::dict&) {
+            return new rocisa::VCvtPkrtzF16F32(self);
+        });
+
     nb::class_<rocisa::VCvtScalePk8F32toFP8, rocisa::VCvtInstruction>(m_inst, "VCvtScalePk8F32toFP8")
         .def(nb::init<const std::shared_ptr<rocisa::RegisterContainer>&,
                       const std::shared_ptr<rocisa::Container>&,

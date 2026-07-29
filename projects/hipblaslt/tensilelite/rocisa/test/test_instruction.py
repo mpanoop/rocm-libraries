@@ -61,7 +61,7 @@ def test_instruction_common():
 def test_instruction_cvt():
     from rocisa.instruction import VCvtF16toF32, VCvtF32toF16, VCvtF32toU32, VCvtU32toF32, \
         VCvtI32toF32, VCvtF32toI32, VCvtFP8toF32, VCvtBF8toF32, VCvtPkFP8toF32, VCvtPkBF8toF32, \
-            VCvtPkF32toFP8, VCvtPkF32toBF8, VCvtSRF32toFP8, VCvtSRF32toBF8
+            VCvtPkF32toFP8, VCvtPkF32toBF8, VCvtSRF32toFP8, VCvtSRF32toBF8, VCvtPkrtzF16F32
 
     # Test VCvtF16toF32
     inst = VCvtF16toF32(dst=vgpr(1), src=vgpr(2), comment="test comment")
@@ -162,6 +162,14 @@ def test_instruction_cvt():
     assert str(inst) == "v_cvt_sr_bf8_f32 v1, v2, v3                        // test comment\n"
     assert str(inst.dst) == "v1"
     assert str(inst.srcs[0]) == "v2"
+
+    # Test VCvtPkrtzF16F32
+    inst = VCvtPkrtzF16F32(dst=vgpr(1), src0=vgpr(2), src1=vgpr(3), comment="test comment")
+    assert str(inst) == "v_cvt_pkrtz_f16_f32 v1, v2, v3                     // test comment\n"
+    assert str(inst.dst) == "v1"
+    assert str(inst.srcs[0]) == "v2"
+    assert str(inst.srcs[1]) == "v3"
+    assert inst.comment == "test comment"
     assert str(inst.srcs[1]) == "v3"
     assert inst.comment == "test comment"
 

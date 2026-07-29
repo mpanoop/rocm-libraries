@@ -456,6 +456,11 @@ validParameters = { # we need to make sure this matches develop
     # Requires DirectToLds on the dense side (B if Sparse==2 else A),
     # and GlobalReadVectorWidthMetadata ∈ {4, 16} (16 needs HasDirectToLdsx4).
     "DirectToLdsMetadata": [0, 1],
+    # Load F32 data from global memory and convert to F16 before storing to LDS
+    # Reduces LDS usage by storing as F16 instead of F32
+    # Requires F32 input data types (DestDataType=F16, ComputeDataType=F32)
+    "ConvertF32toF16A": [False, True],
+    "ConvertF32toF16B": [False, True],
     # Enable subtile-based kernel implementation for MX FP4 (gfx950 only).
     # When True, uses a subtile scheduling strategy with DTL global reads and
     # an optimized storeD path. Automatically forced False on non-gfx950.
