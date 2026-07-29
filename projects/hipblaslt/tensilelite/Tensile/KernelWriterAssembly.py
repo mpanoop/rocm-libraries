@@ -816,7 +816,13 @@ class KernelWriterAssembly(KernelWriter):
     needPackK8Lw = False
     needPackK8Hi = False
 
-    if kernel["ProblemType"]["DataType"].isHalf() or kernel["ProblemType"]["DataType"].isBFloat16():
+    # Check if LDS contains F16 data (either native F16 or F32→F16 conversion)
+    hasF16InLDS = (kernel["ProblemType"]["DataType"].isHalf() or
+                   kernel["ProblemType"]["DataType"].isBFloat16() or
+                   kernel.get("ConvertF32toF16A", False) or
+                   kernel.get("ConvertF32toF16B", False))
+
+    if hasF16InLDS:
       if self.states.lrvwTileA > 1 or self.states.lrvwTileB > 1:
         needPackK16 = True
       if self.states.lrvwTileMetadata > 1:
