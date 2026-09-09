@@ -101,16 +101,22 @@ namespace
         }
     }
 
-#define CHECK_SOLUTION_FOUND(SOL_COUNT)                                                 \
-    do                                                                                  \
-    {                                                                                   \
-        if(SOL_COUNT == 0)                                                              \
-        {                                                                               \
-            rocblas_internal_ostream msg;                                               \
-            print_if_verbose(msg << "rocBLAS warning: No solution found in hipBLASLt. " \
-                                    "Fallback to other GEMM backend.\n");               \
-            throw rocblas_status_not_implemented;                                       \
-        }                                                                               \
+#define CHECK_SOLUTION_FOUND(SOL_COUNT, prob)                                                      \
+    do                                                                                             \
+    {                                                                                              \
+        if(SOL_COUNT == 0)                                                                         \
+        {                                                                                          \
+            std::cout << "No Solution found in hipBLASLt. Fallback to other GEMM backend.\n"; \
+            std::cout << "Problem: m=" << prob.m << ", n=" << prob.n << ", k=" << prob.k      \
+                           << ", transA=" << prob.trans_a << ", transB=" << prob.trans_b           \
+                           << ", lda = " << prob.col_stride_a << ", ldb = " << prob.col_stride_b   \
+                           << ", ldc = " << prob.col_stride_c << ", ldd = " << prob.col_stride_d   \
+                           << "\n";                                                                \
+            rocblas_internal_ostream msg;                                                          \
+            print_if_verbose(msg << "rocBLAS warning: No solution found in hipBLASLt. "            \
+                                    "Fallback to other GEMM backend.\n");                          \
+            throw rocblas_status_not_implemented;                                                  \
+        }                                                                                          \
     } while(0)
 
 #define CHECK_RETURNED_WORKSPACE_SIZE(WORKSPACE_SIZE, MAX_WORKSPACE_SIZE)                       \
@@ -753,7 +759,7 @@ rocblas_status runContractionProblemHipBlasLT(const RocblasContractionProblem<Ti
             workspaceSize = heuristicResult.workspaceSize;
         }
 
-        CHECK_SOLUTION_FOUND(returnedAlgoCount);
+        CHECK_SOLUTION_FOUND(returnedAlgoCount, prob);
         CHECK_RETURNED_WORKSPACE_SIZE(workspaceSize, max_workspace_size);
         if(solution_query)
             return rocblas_status_success;
